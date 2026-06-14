@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "state",
+  "type": "object",
+  "required": ["device_id", "device_type", "state", "ts"],
+  "properties": {
+    "device_id":   { "type": "string" },
+    "device_type": { "type": "string" },
+    "state":       { "type": "object" },
+    "ts":          { "type": "string" }
+  },
+  "additionalProperties": false
+}

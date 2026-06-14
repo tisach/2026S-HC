@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "registration",
+  "type": "object",
+  "required": ["device_id", "device_type", "area", "device_class", "capabilities", "schema_version", "ts"],
+  "properties": {
+    "device_id":      { "type": "string" },
+    "device_type":    { "type": "string" },
+    "area":           { "type": "string" },
+    "device_class":   { "type": "string", "enum": ["constrained", "edge", "cloud"] },
+    "capabilities":   { "type": "array", "items": { "type": "string" } },
+    "schema_version": { "type": "integer" },
+    "ts":             { "type": "string" }
+  },
+  "additionalProperties": false
+}

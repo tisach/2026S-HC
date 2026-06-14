@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="510" viewBox="0 0 680 510" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="40" y="150" width="600" height="230" rx="16" fill="none" stroke="#888780" stroke-width="0.8" stroke-dasharray="6 4"/>
+  <text x="56" y="170" font-size="14" font-weight="500" fill="#5F5E5A">Edge (offline)</text>
+
+  <line x1="130" y1="106" x2="240" y2="190" stroke="#888780" stroke-width="1"/>
+  <line x1="340" y1="106" x2="340" y2="190" stroke="#888780" stroke-width="1"/>
+  <line x1="550" y1="106" x2="440" y2="190" stroke="#888780" stroke-width="1"/>
+  <line x1="270" y1="246" x2="210" y2="300" stroke="#888780" stroke-width="1"/>
+  <line x1="410" y1="246" x2="470" y2="300" stroke="#888780" stroke-width="1"/>
+  <line x1="340" y1="246" x2="340" y2="420" stroke="#888780" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <g>
+    <rect x="40" y="50" width="180" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+    <text x="130" y="78" text-anchor="middle" font-size="14" font-weight="500" fill="#04342C">Temperatursensor</text>
+    <text x="130" y="95" text-anchor="middle" font-size="12" fill="#0F6E56">publiziert Telemetrie</text>
+  </g>
+  <g>
+    <rect x="250" y="50" width="180" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+    <text x="340" y="78" text-anchor="middle" font-size="14" font-weight="500" fill="#04342C">Ultraschall HC-SR04</text>
+    <text x="340" y="95" text-anchor="middle" font-size="12" fill="#0F6E56">publiziert Praesenz</text>
+  </g>
+  <g>
+    <rect x="460" y="50" width="180" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+    <text x="550" y="78" text-anchor="middle" font-size="14" font-weight="500" fill="#04342C">Smart Light</text>
+    <text x="550" y="95" text-anchor="middle" font-size="12" fill="#0F6E56">abonniert Kommandos</text>
+  </g>
+
+  <g>
+    <rect x="180" y="190" width="320" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+    <text x="340" y="218" text-anchor="middle" font-size="14" font-weight="500" fill="#26215C">MQTT-Broker (Mosquitto)</text>
+    <text x="340" y="235" text-anchor="middle" font-size="12" fill="#534AB7">pub/sub Message-Bus</text>
+  </g>
+
+  <g>
+    <rect x="110" y="300" width="200" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+    <text x="210" y="328" text-anchor="middle" font-size="14" font-weight="500" fill="#4A1B0C">Regel-Engine</text>
+    <text x="210" y="345" text-anchor="middle" font-size="12" fill="#993C1D">ereignisbasiert</text>
+  </g>
+  <g>
+    <rect x="370" y="300" width="200" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+    <text x="470" y="328" text-anchor="middle" font-size="14" font-weight="500" fill="#4A1B0C">Device-Registry</text>
+    <text x="470" y="345" text-anchor="middle" font-size="12" fill="#993C1D">Discovery &amp; Inventar</text>
+  </g>
+
+  <g>
+    <rect x="240" y="420" width="200" height="50" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8" stroke-dasharray="6 4"/>
+    <text x="340" y="442" text-anchor="middle" font-size="14" font-weight="500" fill="#2C2C2A">Cloud (optional)</text>
+    <text x="340" y="459" text-anchor="middle" font-size="12" fill="#5F5E5A">Dashboards, ML</text>
+  </g>
+</svg>

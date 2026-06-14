@@ -1,0 +1,79 @@
+# Zwei Raeume (living_room, bedroom) aus identischem Code -- nur AREA unterscheidet
+# die Instanzen. Registry und Regel-Engine bleiben unveraendert: sie arbeiten
+# raumweise ueber Topic-Wildcards. Neue Raeume = neue Eintraege, kein Code-Eingriff.
+services:
+  broker:
+    image: eclipse-mosquitto:2
+    container_name: hc-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  dashboard:
+    image: nginx:alpine
+    container_name: hc-dashboard
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+    depends_on: [broker]
+
+  rule-engine:
+    build: .
+    command: python -m services.rule_engine
+    environment: { MQTT_HOST: broker }
+    depends_on: [broker]
+    restart: on-failure
+
+  registry:
+    build: .
+    command: python -m services.registry
+    environment: { MQTT_HOST: broker }
+    depends_on: [broker]
+    restart: on-failure
+
+  # --- Wohnzimmer ---------------------------------------------------------
+  living-temperature:
+    build: .
+    command: python -m devices.temperature_sensor
+    environment: { MQTT_HOST: broker, AREA: living_room }
+    depends_on: [broker]
+    restart: on-failure
+
+  living-ultrasonic:
+    build: .
+    command: python -m devices.ultrasonic_sensor
+    environment: { MQTT_HOST: broker, AREA: living_room }
+    depends_on: [broker]
+    restart: on-failure
+
+  living-light:
+    build: .
+    command: python -m devices.smart_light
+    environment: { MQTT_HOST: broker, AREA: living_room }
+    depends_on: [broker]
+    restart: on-failure
+
+  # --- Schlafzimmer (identischer Code, nur AREA=bedroom) ------------------
+  bedroom-temperature:
+    build: .
+    command: python -m devices.temperature_sensor
+    environment: { MQTT_HOST: broker, AREA: bedroom }
+    depends_on: [broker]
+    restart: on-failure
+
+  bedroom-ultrasonic:
+    build: .
+    command: python -m devices.ultrasonic_sensor
+    environment: { MQTT_HOST: broker, AREA: bedroom }
+    depends_on: [broker]
+    restart: on-failure
+
+  bedroom-light:
+    build: .
+    command: python -m devices.smart_light
+    environment: { MQTT_HOST: broker, AREA: bedroom }
+    depends_on: [broker]
+    restart: on-failure

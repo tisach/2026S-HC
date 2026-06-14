@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart-Home Leitstand</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+  :root{
+    --bg:#14161a; --surface:#1c1f25; --surface-2:#23272f; --border:#2a2e36;
+    --text:#e8e6e0; --muted:#8b9099; --faint:#5d626b;
+    --teal:#5dcaa5; --teal-dim:#1d9e75; --amber:#efa94a; --coral:#e0744a;
+    --purple:#8e86e6;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;padding:28px clamp(16px,4vw,48px) 48px}
+  header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+    border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:24px}
+  h1{font-size:18px;font-weight:500;letter-spacing:.02em;margin:0}
+  h1 span{color:var(--faint);font-family:var(--mono);font-weight:400;font-size:13px;margin-left:10px}
+  .conn{margin-left:auto;display:flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .led{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+  .conn.up .led{background:var(--teal);box-shadow:0 0 0 0 var(--teal-dim);animation:pulse 2s infinite}
+  .conn.up{color:var(--teal)}
+  .counts{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .counts b{color:var(--text);font-weight:500}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(244px,1fr))}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px;min-height:150px}
+  .tile.offline{opacity:.5}
+  .tile-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .name{font-family:var(--mono);font-size:14px;font-weight:500}
+  .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none;margin-top:4px}
+  .dot.on{background:var(--teal);animation:pulse 2.4s infinite}
+
+  .readout{font-family:var(--mono);line-height:1;display:flex;align-items:baseline;gap:6px;
+    padding:6px 8px;border-radius:6px;margin:-2px -4px}
+  .readout .big{font-size:30px;font-weight:500;letter-spacing:-.01em}
+  .readout .unit{font-size:13px;color:var(--muted)}
+  .readout .metric{font-size:11px;color:var(--faint);margin-left:auto;text-transform:uppercase;letter-spacing:.08em}
+  .readout.tick{animation:flash .7s ease-out}
+
+  .caps{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto}
+  .badge{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:999px;
+    border:1px solid var(--border);color:var(--muted)}
+  .badge.cls-constrained{color:var(--teal);border-color:#1d9e7555}
+  .badge.cls-edge{color:var(--purple);border-color:#8e86e655}
+  .badge.cls-cloud{color:var(--amber);border-color:#efa94a55}
+  .foot{display:flex;justify-content:space-between;font-family:var(--mono);
+    font-size:11px;color:var(--faint);border-top:1px solid var(--border);padding-top:9px}
+
+  .light-bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+  .light-bar i{display:block;height:100%;background:var(--coral);transition:width .3s}
+
+  .log{margin-top:30px;border-top:1px solid var(--border);padding-top:16px}
+  .log h2{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.1em;margin:0 0 10px}
+  .log ul{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:12px;
+    max-height:230px;overflow:auto}
+  .log li{display:flex;gap:12px;padding:3px 0;color:var(--muted);border-bottom:1px solid #20242b}
+  .log time{color:var(--faint);flex:none}
+  .log .tp{color:var(--purple);flex:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46%}
+  .log .pl{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .empty{color:var(--faint);font-family:var(--mono);font-size:13px;padding:40px 0;text-align:center}
+
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(93,202,165,.5)}70%{box-shadow:0 0 0 7px rgba(93,202,165,0)}100%{box-shadow:0 0 0 0 rgba(93,202,165,0)}}
+  @keyframes flash{from{background:rgba(239,169,74,.28)}to{background:transparent}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Smart-Home Leitstand <span id="broker"></span></h1>
+    <div class="counts"><b id="n-online">0</b> online · <b id="n-total">0</b> Geräte</div>
+    <div class="conn" id="conn"><span class="led"></span><span id="conn-txt">Verbindung…</span></div>
+  </header>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">Warte auf Geräte… Broker per <code>docker compose up</code> starten.</div>
+
+  <section class="log">
+    <h2>Live-Ereignisse</h2>
+    <ul id="log"></ul>
+  </section>
+
+<script>
+const WS_PORT = 9001;
+const url = `ws://${location.hostname || "localhost"}:${WS_PORT}`;
+document.getElementById("broker").textContent = url;
+
+const devices = {};      // id -> device record
+const events = [];       // recent events for the log
+
+const $ = (id) => document.getElementById(id);
+const fmtTime = (ms) => {
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 1) return "jetzt";
+  if (s < 60) return `vor ${s}s`;
+  return `vor ${Math.floor(s / 60)}m`;
+};
+
+const client = mqtt.connect(url, {reconnectPeriod: 2000});
+
+client.on("connect", () => setConn(true));
+client.on("reconnect", () => setConn(false, "Reconnect…"));
+client.on("close", () => setConn(false, "getrennt"));
+client.on("error", () => setConn(false, "Fehler"));
+client.on("connect", () => client.subscribe("home/#", {qos: 1}));
+
+function setConn(up, txt) {
+  $("conn").classList.toggle("up", up);
+  $("conn-txt").textContent = up ? "verbunden" : (txt || "Verbindung…");
+}
+
+client.on("message", (topic, buf) => {
+  const raw = buf.toString();
+  const parts = topic.split("/");
+  let json = null;
+  try { json = JSON.parse(raw); } catch (_) {}
+
+  if (topic.startsWith("home/_registry/announce/") && json) {
+    upsert(json.device_id, {
+      id: json.device_id, type: json.device_type, area: json.area,
+      cls: json.device_class, caps: json.capabilities || [],
+    });
+  } else if (parts.length === 5) {
+    const [, area, type, id, channel] = parts;
+    const d = upsert(id, {id, type, area});
+    if (channel === "telemetry" && json) {
+      d.metric = json.metric; d.value = json.value; d.unit = json.unit;
+      d.valueTs = Date.now();
+    } else if (channel === "state" && json) {
+      d.state = json.state; d.valueTs = Date.now();
+    } else if (channel === "availability") {
+      d.online = raw === "online";
+    }
+    d.lastSeen = Date.now();
+  }
+
+  pushEvent(topic, raw);
+  render();
+});
+
+function upsert(id, fields) {
+  const d = devices[id] || (devices[id] = {id, caps: [], online: true});
+  Object.assign(d, fields);
+  if (d.lastSeen === undefined) d.lastSeen = Date.now();
+  return d;
+}
+
+function pushEvent(topic, raw) {
+  events.unshift({t: Date.now(), topic, raw: raw.length > 80 ? raw.slice(0, 80) + "…" : raw});
+  if (events.length > 40) events.pop();
+}
+
+function unitShort(u) {
+  return ({celsius: "°C", centimeter: "cm"})[u] || u || "";
+}
+
+function render() {
+  const list = Object.values(devices).sort((a, b) => a.id.localeCompare(b.id));
+  $("empty").style.display = list.length ? "none" : "block";
+  $("n-total").textContent = list.length;
+  $("n-online").textContent = list.filter((d) => d.online).length;
+
+  const now = Date.now();
+  $("grid").innerHTML = list.map((d) => {
+    const fresh = d.valueTs && now - d.valueTs < 700 ? " tick" : "";
+    let readout;
+    if (d.state) {                                   // actuator
+      const on = d.state.power;
+      const lvl = d.state.brightness ?? 0;
+      readout = `<div class="readout${fresh}">
+          <span class="big" style="color:${on ? "var(--coral)" : "var(--faint)"}">${on ? "AN" : "AUS"}</span>
+          <span class="metric">light</span></div>
+        <div class="light-bar"><i style="width:${lvl}%"></i></div>`;
+    } else if (d.value !== undefined) {              // sensor
+      readout = `<div class="readout${fresh}">
+          <span class="big">${d.value}</span>
+          <span class="unit">${unitShort(d.unit)}</span>
+          <span class="metric">${d.metric || ""}</span></div>`;
+    } else {
+      readout = `<div class="readout"><span class="big" style="color:var(--faint)">—</span></div>`;
+    }
+    const caps = (d.caps || []).map((c) => `<span class="badge">${c}</span>`).join("");
+    const cls = d.cls ? `<span class="badge cls-${d.cls}">${d.cls}</span>` : "";
+    return `<div class="tile ${d.online ? "" : "offline"}">
+        <div class="tile-head">
+          <div><div class="name">${d.id}</div>
+            <div class="sub">${d.type || "?"} · ${d.area || "?"}</div></div>
+          <span class="dot ${d.online ? "on" : ""}"></span>
+        </div>
+        ${readout}
+        <div class="caps">${cls}${caps}</div>
+        <div class="foot"><span>${d.online ? "online" : "offline"}</span>
+          <span>${fmtTime(d.lastSeen)}</span></div>
+      </div>`;
+  }).join("");
+
+  $("log").innerHTML = events.map((e) =>
+    `<li><time>${new Date(e.t).toLocaleTimeString("de-DE")}</time>
+      <span class="tp">${e.topic}</span><span class="pl">${e.raw}</span></li>`).join("");
+}
+
+setInterval(render, 1000);   // keep relative timestamps fresh
+render();
+</script>
+</body>
+</html>

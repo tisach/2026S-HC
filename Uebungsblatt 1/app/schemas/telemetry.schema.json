@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "telemetry",
+  "type": "object",
+  "required": ["device_id", "device_type", "metric", "value", "unit", "ts"],
+  "properties": {
+    "device_id":   { "type": "string" },
+    "device_type": { "type": "string" },
+    "metric":      { "type": "string" },
+    "value":       { "type": "number" },
+    "unit":        { "type": "string" },
+    "ts":          { "type": "string" }
+  },
+  "additionalProperties": false
+}
