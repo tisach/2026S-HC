@@ -5,12 +5,8 @@ eigenständige Komponenten kommunizieren über einen MQTT-Broker. Physische
 Sensoren und Aktoren werden als realistisch verhaltende Software-Mockups
 simuliert; die fachliche Logik (Automatisierung, Discovery) läuft am Edge.
 
-## Architektur
 
-Leitbild: **Message-Bus als Nervensystem** — Geräte sind voneinander entkoppelt
-und reden nur über den Broker. Details und Diagramm: [`docs/architecture.md`](docs/architecture.md).
-
-## Schnellstart
+## Anleitung
 
 Voraussetzung: Docker und Docker Compose.
 
@@ -40,7 +36,7 @@ Fehlertoleranz testen: einen Container stoppen
 (`docker compose stop smart-light`) — die übrigen laufen weiter, die Registry
 meldet das Gerät über das Last-Will als `offline`.
 
-## Schnittstellen-Vertrag
+## Schnittstellen
 
 Topic-Schema: `home/{area}/{device_type}/{device_id}/{channel}`
 
@@ -114,7 +110,7 @@ ARM-Klassen (Cortex-M-Sensorknoten vs. leistungsfähigeres Edge-Gateway).
 | Heterogenität    | `device_class` und unterschiedliche Fähigkeiten je Gerät             |
 | Erweiterbarkeit  | Registry-Discovery; Regel-Engine lernt Aktoren zur Laufzeit          |
 
-## Einsatz generativer KI
+## Tagesprofile
 
 Die Sensoren beziehen ihre Werte aus **vorab durch generative KI erzeugten
 Tagesprofilen** ([`app/data/`](app/data)). Drei Profile liegen bei:
@@ -125,11 +121,6 @@ Tagesprofilen** ([`app/data/`](app/data)). Drei Profile liegen bei:
 | `urlaub`      | niemand zu Hause, Heizung abgesenkt                              |
 | `besuch`      | viele Personen, Wohnzimmer durchgehend belegt und warm          |
 
-Ein Sprachmodell hat je Profil einen plausiblen Tagesverlauf als Zeitreihe
-beschrieben; die Sensoren spielen ihn zeitabhängig ab
-([`app/common/sensing.py`](app/common/sensing.py)). Die KI läuft **vorab**, nicht
-zur Laufzeit — die Datensätze sind versioniert, die Demo spielt sie nur ab
-(deterministisch, kein API-Aufruf, kein Ausfallrisiko im Vortrag).
 
 **Szenario zur Laufzeit umschalten.** Das aktive Profil wird über ein retained
 Control-Topic (`home/_control/scenario`) gesteuert; alle Sensoren sind darauf
@@ -170,8 +161,3 @@ So springst du gezielt auf eine Tageszeit (z. B. 18:00 → Wohnzimmer belegt) od
 lässt im Zeitraffer einen kompletten Tag durchlaufen. Optional setzt die
 Umgebungsvariable `CLOCK` einen Startwert.
 
-## Hinweis zur Abgabe
-
-Dieses Repository enthält bewusst keine personenbezogenen Daten (kein Name,
-keine Matrikelnummer), damit es im Sammel-Repository `2026S-HC` veröffentlicht
-werden kann.
