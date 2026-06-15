@@ -55,6 +55,29 @@ Topic-Schema: `home/{area}/{device_type}/{device_id}/{channel}`
 Die JSON-Schemas in [`app/schemas/`](app/schemas) sind der verbindliche
 Vertrag; jede Nachricht wird vor dem Versand validiert.
 
+## Anforderungen aktiv testen (Akzeptanztest)
+
+Der Anwendungsfall „Ein Abend zieht ins Haus ein" prüft jede geforderte
+Eigenschaft aktiv am laufenden System. Ein Szenario-Client schleust einen
+komplett neuen Raum (`office`) nur über den Bus ein und beobachtet, ob das
+**unveränderte** System korrekt reagiert. Bei laufendem Stack:
+
+```bash
+docker compose up -d
+docker compose run --rm scenario
+```
+
+Geprüft werden Verteilung, Heterogenität, Erweiterbarkeit/Discovery, lose
+Kopplung (die Regel-Engine steuert ein nie zuvor gesehenes Gerät), Robustheit
+(fehlerhafte Nachrichten brechen nichts), Fehlertoleranz (ein „ausgefallener"
+Aktor blockiert die Engine nicht) und Skalierbarkeit (+15 Geräte zur Laufzeit).
+Der Test endet mit einer PASS/FAIL-Übersicht und Exit-Code 0, wenn alle
+Anforderungen erfüllt sind.
+
+Echte Prozess-Fehlertoleranz zusätzlich live zeigen: `docker compose stop
+bedroom-light` — die Kachel wird offline, der Rest läuft weiter; `docker compose
+start bedroom-light` holt sie zurück.
+
 ## Komponenten
 
 | Komponente            | Rolle                  | device_class  |
@@ -93,12 +116,59 @@ ARM-Klassen (Cortex-M-Sensorknoten vs. leistungsfähigeres Edge-Gateway).
 
 ## Einsatz generativer KI
 
-Die Sensoren nutzen Verhaltensprofile (Tag/Nacht-Temperatur, Anwesenheit) statt
-reiner Zufallswerte — siehe [`app/common/profiles.py`](app/common/profiles.py).
-Diese Profile sind der Andockpunkt für generative KI: Ein LLM kann komplette
-Szenarien („Arbeitstag", „Urlaub") oder ganze Mockup-Geräte gegen den
-definierten Schnittstellen-Vertrag erzeugen, ohne dass sich die Infrastruktur
-ändert.
+Die Sensoren beziehen ihre Werte aus **vorab durch generative KI erzeugten
+Tagesprofilen** ([`app/data/`](app/data)). Drei Profile liegen bei:
+
+| Profil        | Verhalten                                                        |
+|---------------|------------------------------------------------------------------|
+| `day_profile` | normaler Werktag (morgens/abends zu Hause, tagsüber abwesend)    |
+| `urlaub`      | niemand zu Hause, Heizung abgesenkt                              |
+| `besuch`      | viele Personen, Wohnzimmer durchgehend belegt und warm          |
+
+Ein Sprachmodell hat je Profil einen plausiblen Tagesverlauf als Zeitreihe
+beschrieben; die Sensoren spielen ihn zeitabhängig ab
+([`app/common/sensing.py`](app/common/sensing.py)). Die KI läuft **vorab**, nicht
+zur Laufzeit — die Datensätze sind versioniert, die Demo spielt sie nur ab
+(deterministisch, kein API-Aufruf, kein Ausfallrisiko im Vortrag).
+
+**Szenario zur Laufzeit umschalten.** Das aktive Profil wird über ein retained
+Control-Topic (`home/_control/scenario`) gesteuert; alle Sensoren sind darauf
+abonniert und wechseln sofort. Zwei Wege:
+
+- **Dashboard-Buttons** (oben: Alltag / Urlaub / Besuch / Formel) — ein Klick
+  veröffentlicht das Szenario auf den Bus.
+- **CLI-Kommando** im laufenden Stack:
+  ```bash
+  docker compose exec rule-engine python -m control.set_scenario besuch
+  ```
+
+Das Startszenario kommt aus der Umgebungsvariable `SCENARIO` (im Compose auf
+`day_profile` gesetzt). Eine leere Auswahl (`Formel`) schaltet auf die
+deterministischen Formeln in [`app/common/profiles.py`](app/common/profiles.py)
+zurück. Die Geräteschnittstelle bleibt in allen Fällen identisch — es wechselt
+nur die Herkunft der Werte. Dass der Umschalter selbst nur eine Bus-Nachricht
+ist, ist ein weiterer Beleg für die lose Kopplung.
+
+**Simulierte Uhr (Tageszeit manipulieren).** Damit der Tagesverlauf im Vortrag
+nicht in Echtzeit abläuft, lesen die Sensoren ihre Zeit aus einer simulierten Uhr
+([`app/common/simclock.py`](app/common/simclock.py)), steuerbar über das retained
+Topic `home/_control/clock`:
+
+| Befehl   | Wirkung                                                        |
+|----------|----------------------------------------------------------------|
+| `real`   | echte Systemzeit (Standard)                                    |
+| `HH:MM`  | Uhrzeit einfrieren, z. B. `18:30`                              |
+| `x<f>`   | Zeitraffer: `f` simulierte Sekunden je echter Sekunde (`x600` = ein Tag in ~2,4 min) |
+
+Bedienbar über die **Uhrzeit-Buttons** im Dashboard (Echtzeit / 07:00 / 12:00 /
+18:00 / 23:00 / Zeitraffer) oder per CLI:
+```bash
+docker compose exec rule-engine python -m control.set_clock 18:00
+docker compose exec rule-engine python -m control.set_clock x600
+```
+So springst du gezielt auf eine Tageszeit (z. B. 18:00 → Wohnzimmer belegt) oder
+lässt im Zeitraffer einen kompletten Tag durchlaufen. Optional setzt die
+Umgebungsvariable `CLOCK` einen Startwert.
 
 ## Hinweis zur Abgabe
 

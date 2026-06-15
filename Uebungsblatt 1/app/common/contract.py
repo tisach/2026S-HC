@@ -1,9 +1,3 @@
-"""Gemeinsamer Schnittstellen-Vertrag (interface contract) fuer alle Komponenten.
-
-Definiert das Topic-Schema, die JSON-Schema-Validierung und eine Basisklasse
-fuer simulierte Geraete. Alle Komponenten kommunizieren ausschliesslich ueber
-den Broker -- es gibt keine direkten Aufrufe zwischen Geraeten (lose Kopplung).
-"""
 import json
 import logging
 import os
@@ -16,6 +10,7 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.client import CallbackAPIVersion
 from jsonschema import validate, ValidationError
 
+# MQTT-Client-Logging (z. B. Verbindungsfehler) sichtbar machen.
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(name)-16s %(levelname)-7s %(message)s",
@@ -28,10 +23,14 @@ MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 # Wurzel-Namespace aller Topics.
 PREFIX = "home"
 
+# Control-Topics: Szenario-Auswahl und Uhrzeit (simulierte Zeit, z. B. für Tageslicht).
+CONTROL_TOPIC = f"{PREFIX}/_control/scenario"
+CLOCK_TOPIC = f"{PREFIX}/_control/clock"
+
 _SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
 _SCHEMA_CACHE: dict[str, dict] = {}
 
-
+# Hilfsfunktion: JSON-Schema nur einmal laden und dann im Cache behalten (schneller, weniger IO).
 def load_schema(name: str) -> dict:
     if name not in _SCHEMA_CACHE:
         with open(_SCHEMA_DIR / f"{name}.schema.json", encoding="utf-8") as fh:
@@ -43,7 +42,7 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-# --- Topic-Schema -----------------------------------------------------------
+# Topic-Schema 
 # home/{area}/{device_type}/{device_id}/{channel}
 def telemetry_topic(area: str, dtype: str, did: str) -> str:
     return f"{PREFIX}/{area}/{dtype}/{did}/telemetry"
@@ -77,7 +76,7 @@ def connect_with_retry(client: mqtt.Client, log: logging.Logger,
                         host, port, exc)
             time.sleep(2)
 
-
+# Basisklasse für Sensoren und Aktoren.
 class Device:
     """Basisklasse fuer simulierte Sensoren und Aktoren.
 
@@ -95,6 +94,10 @@ class Device:
         self.capabilities = capabilities or []
         self.is_actuator = is_actuator
         self.log = logging.getLogger(device_id)
+        # topic -> callable(payload_str). Sensoren registrieren hier z. B.
+        # CONTROL_TOPIC -> sensing.set_scenario und CLOCK_TOPIC -> simclock.set_clock,
+        # um per Bus umschaltbar zu sein (retained -> sofort beim Verbinden aktiv).
+        self.control_hooks = {}
 
         self.client = mqtt.Client(client_id=device_id,
                                   callback_api_version=CallbackAPIVersion.VERSION2)
@@ -113,6 +116,8 @@ class Device:
         self._announce()
         if self.is_actuator:
             client.subscribe(command_topic(self.area, self.device_type, self.device_id), qos=1)
+        for topic in self.control_hooks:
+            client.subscribe(topic, qos=1)  # retained -> aktueller Wert sofort
         self.on_ready()
 
     def _announce(self) -> None:
@@ -159,14 +164,21 @@ class Device:
                 json.dumps(payload), qos=1, retain=True)
 
     def _on_message(self, client, userdata, msg):
+        # Control-Topics (Szenario, Uhr): Nutzlast ist einfacher Text.
+        hook = self.control_hooks.get(msg.topic)
+        if hook is not None:
+            value = msg.payload.decode(errors="ignore").strip()
+            hook(value)
+            self.log.info("Control %s -> '%s'", msg.topic.split("/")[-1], value or "(default)")
+            return
         try:
             data = json.loads(msg.payload.decode())
-        except json.JSONDecodeError:
+        except (UnicodeDecodeError, json.JSONDecodeError):
             self.log.warning("verwerfe Nicht-JSON-Nachricht auf %s", msg.topic)
             return
         self.on_command(msg.topic, data)
 
-    # --- von Subklassen ueberschreibbar ---
+    # Ueberschreibbare Hooks
     def on_ready(self) -> None:
         """Wird nach erfolgreichem Verbinden aufgerufen."""
 

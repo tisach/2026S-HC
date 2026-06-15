@@ -1,0 +1,19 @@
+{
+  "name": "Besuch / Feier (viele Personen)",
+  "description": "Tagsueber und abends viele Gäste. Das Wohnzimmer ist fast durchgehend belegt und heizt durch Personen und Kochen deutlich auf; das Schlafzimmer wird zeitweise genutzt (Garderobe, Rückzug).",
+  "areas": {
+    "living_room": [
+      {"from": "00:00", "presence": false, "temp": 20.5, "note": "Ruhe vor dem Besuch"},
+      {"from": "10:00", "presence": true,  "temp": 21.6, "note": "erste Gäste treffen ein"},
+      {"from": "12:00", "presence": true,  "temp": 23.0, "note": "viele Leute, Kochen, Raum heizt auf (~6 Personen)"},
+      {"from": "18:00", "presence": true,  "temp": 24.2, "note": "Hoehepunkt der Feier (~8 Personen)"},
+      {"from": "23:30", "presence": true,  "temp": 22.6, "note": "Gäste verabschieden sich nach und nach"}
+    ],
+    "bedroom": [
+      {"from": "00:00", "presence": false, "temp": 19.5, "note": "leer"},
+      {"from": "11:00", "presence": true,  "temp": 20.2, "note": "Garderobe/Rückzug, zeitweise belegt"},
+      {"from": "15:00", "presence": false, "temp": 20.6, "note": "wieder leer"},
+      {"from": "23:00", "presence": true,  "temp": 19.9, "note": "Gastgeber zieht sich zurück"}
+    ]
+  }
+}

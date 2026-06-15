@@ -31,22 +31,28 @@ class Registry:
         client.subscribe(f"{PREFIX}/+/+/+/availability", qos=1)
 
     def _on_message(self, client, userdata, msg):
-        parts = msg.topic.split("/")
-        payload = msg.payload.decode()
+        try:
+            parts = msg.topic.split("/")
+            payload = msg.payload.decode()
 
-        if msg.topic.startswith(f"{PREFIX}/_registry/announce/"):
-            try:
+            if msg.topic.startswith(f"{PREFIX}/_registry/announce/"):
                 reg = json.loads(payload)
-            except json.JSONDecodeError:
-                return
-            self.devices[reg["device_id"]] = reg
-            self.log.info("registriert: %s (typ=%s, klasse=%s, faehigkeiten=%s)",
-                          reg["device_id"], reg["device_type"],
-                          reg["device_class"], reg["capabilities"])
-        elif parts[-1] == "availability":
-            did = parts[3]
-            self.availability[did] = payload
-            self.log.info("Verfuegbarkeit %s -> %s", did, payload)
+                # nur vollstaendige Registrierungen aufnehmen (Robustheit)
+                if not all(k in reg for k in
+                           ("device_id", "device_type", "device_class", "capabilities")):
+                    self.log.warning("verwerfe unvollstaendige Registrierung auf %s", msg.topic)
+                    return
+                self.devices[reg["device_id"]] = reg
+                self.log.info("registriert: %s (typ=%s, klasse=%s, faehigkeiten=%s)",
+                              reg["device_id"], reg["device_type"],
+                              reg["device_class"], reg["capabilities"])
+            elif parts[-1] == "availability" and len(parts) == 5:
+                self.availability[parts[3]] = payload
+                self.log.info("Verfuegbarkeit %s -> %s", parts[3], payload)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.log.warning("verwerfe Nicht-JSON-Nachricht auf %s", msg.topic)
+        except Exception as exc:
+            self.log.warning("uebergehe fehlerhafte Nachricht auf %s (%s)", msg.topic, exc)
 
     def _inventory_loop(self) -> None:
         while True:

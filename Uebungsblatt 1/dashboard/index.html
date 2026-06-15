@@ -69,6 +69,13 @@
   .log .pl{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .empty{color:var(--faint);font-family:var(--mono);font-size:13px;padding:40px 0;text-align:center}
 
+  .scenario-bar{display:flex;align-items:center;gap:8px;margin-bottom:22px;flex-wrap:wrap}
+  .sb-label{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-right:4px}
+  .sb-btn{font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--surface);
+    border:1px solid var(--border);border-radius:999px;padding:5px 14px;cursor:pointer;transition:all .15s}
+  .sb-btn:hover{color:var(--text);border-color:var(--faint)}
+  .sb-btn.active{color:var(--bg);background:var(--teal);border-color:var(--teal);font-weight:600}
+
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(93,202,165,.5)}70%{box-shadow:0 0 0 7px rgba(93,202,165,0)}100%{box-shadow:0 0 0 0 rgba(93,202,165,0)}}
   @keyframes flash{from{background:rgba(239,169,74,.28)}to{background:transparent}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
@@ -80,6 +87,24 @@
     <div class="counts"><b id="n-online">0</b> online · <b id="n-total">0</b> Geräte</div>
     <div class="conn" id="conn"><span class="led"></span><span id="conn-txt">Verbindung…</span></div>
   </header>
+
+  <div class="scenario-bar">
+    <span class="sb-label">Szenario</span>
+    <button class="sb-btn" data-scn="day_profile">Alltag</button>
+    <button class="sb-btn" data-scn="urlaub">Urlaub</button>
+    <button class="sb-btn" data-scn="besuch">Besuch</button>
+    <button class="sb-btn" data-scn="">Formel</button>
+  </div>
+
+  <div class="scenario-bar">
+    <span class="sb-label">Uhrzeit</span>
+    <button class="sb-btn clk-btn" data-clk="real">Echtzeit</button>
+    <button class="sb-btn clk-btn" data-clk="07:00">07:00</button>
+    <button class="sb-btn clk-btn" data-clk="12:00">12:00</button>
+    <button class="sb-btn clk-btn" data-clk="18:00">18:00</button>
+    <button class="sb-btn clk-btn" data-clk="23:00">23:00</button>
+    <button class="sb-btn clk-btn" data-clk="x600">Zeitraffer</button>
+  </div>
 
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty">Warte auf Geräte… Broker per <code>docker compose up</code> starten.</div>
@@ -96,6 +121,8 @@ document.getElementById("broker").textContent = url;
 
 const devices = {};      // id -> device record
 const events = [];       // recent events for the log
+let activeScenario = null;
+let activeClock = "real";
 
 const $ = (id) => document.getElementById(id);
 const fmtTime = (ms) => {
@@ -123,6 +150,20 @@ client.on("message", (topic, buf) => {
   const parts = topic.split("/");
   let json = null;
   try { json = JSON.parse(raw); } catch (_) {}
+
+  if (topic === "home/_control/scenario") {
+    activeScenario = raw.trim();
+    renderScenarioBar();
+    pushEvent(topic, raw || "(Formel)");
+    return;
+  }
+
+  if (topic === "home/_control/clock") {
+    activeClock = raw.trim() || "real";
+    renderClockBar();
+    pushEvent(topic, raw || "real");
+    return;
+  }
 
   if (topic.startsWith("home/_registry/announce/") && json) {
     upsert(json.device_id, {
@@ -208,7 +249,28 @@ function render() {
       <span class="tp">${e.topic}</span><span class="pl">${e.raw}</span></li>`).join("");
 }
 
+function renderScenarioBar() {
+  document.querySelectorAll(".sb-btn[data-scn]").forEach((b) =>
+    b.classList.toggle("active", b.dataset.scn === (activeScenario || "")));
+}
+
+function renderClockBar() {
+  document.querySelectorAll(".clk-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.clk === activeClock));
+}
+
+document.querySelectorAll(".sb-btn[data-scn]").forEach((b) => {
+  b.onclick = () => client.publish("home/_control/scenario", b.dataset.scn,
+                                   { qos: 1, retain: true });
+});
+document.querySelectorAll(".clk-btn").forEach((b) => {
+  b.onclick = () => client.publish("home/_control/clock", b.dataset.clk,
+                                   { qos: 1, retain: true });
+});
+
 setInterval(render, 1000);   // keep relative timestamps fresh
+renderScenarioBar();
+renderClockBar();
 render();
 </script>
 </body>

@@ -1,0 +1,16 @@
+{
+  "name": "Urlaub (mehrtaegige Abwesenheit)",
+  "description": "Niemand zu Hause. Heizung im Eco-/Absenkbetrieb, nur leichte Tagesschwankung durch Sonneneinstrahlung. Alle Räume dauerhaft unbelegt.",
+  "areas": {
+    "living_room": [
+      {"from": "00:00", "presence": false, "temp": 17.5, "note": "Urlaub: leer, Heizung im Eco-Modus"},
+      {"from": "13:00", "presence": false, "temp": 18.6, "note": "Mittagssonne erwärmt den Raum leicht"},
+      {"from": "20:00", "presence": false, "temp": 17.8, "note": "abendliche Abkühlung"}
+    ],
+    "bedroom": [
+      {"from": "00:00", "presence": false, "temp": 17.0, "note": "Urlaub: leer"},
+      {"from": "13:00", "presence": false, "temp": 18.1, "note": "nachmittags am wärmsten"},
+      {"from": "21:00", "presence": false, "temp": 17.2, "note": "abends abgekühlt"}
+    ]
+  }
+}

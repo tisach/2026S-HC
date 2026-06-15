@@ -38,21 +38,21 @@ services:
   living-temperature:
     build: .
     command: python -m devices.temperature_sensor
-    environment: { MQTT_HOST: broker, AREA: living_room }
+    environment: { MQTT_HOST: broker, AREA: living_room, SCENARIO: day_profile }
     depends_on: [broker]
     restart: on-failure
 
   living-ultrasonic:
     build: .
     command: python -m devices.ultrasonic_sensor
-    environment: { MQTT_HOST: broker, AREA: living_room }
+    environment: { MQTT_HOST: broker, AREA: living_room, SCENARIO: day_profile }
     depends_on: [broker]
     restart: on-failure
 
   living-light:
     build: .
     command: python -m devices.smart_light
-    environment: { MQTT_HOST: broker, AREA: living_room }
+    environment: { MQTT_HOST: broker, AREA: living_room, SCENARIO: day_profile }
     depends_on: [broker]
     restart: on-failure
 
@@ -60,20 +60,29 @@ services:
   bedroom-temperature:
     build: .
     command: python -m devices.temperature_sensor
-    environment: { MQTT_HOST: broker, AREA: bedroom }
+    environment: { MQTT_HOST: broker, AREA: bedroom, SCENARIO: day_profile }
     depends_on: [broker]
     restart: on-failure
 
   bedroom-ultrasonic:
     build: .
     command: python -m devices.ultrasonic_sensor
-    environment: { MQTT_HOST: broker, AREA: bedroom }
+    environment: { MQTT_HOST: broker, AREA: bedroom, SCENARIO: day_profile }
     depends_on: [broker]
     restart: on-failure
 
   bedroom-light:
     build: .
     command: python -m devices.smart_light
-    environment: { MQTT_HOST: broker, AREA: bedroom }
+    environment: { MQTT_HOST: broker, AREA: bedroom, SCENARIO: day_profile }
     depends_on: [broker]
     restart: on-failure
+
+  # Akzeptanztest-Szenario -- nur auf Anforderung (Profil 'test'):
+  #   docker compose run --rm scenario
+  scenario:
+    build: .
+    command: python -m scenario.acceptance
+    environment: { MQTT_HOST: broker }
+    depends_on: [broker, rule-engine, registry]
+    profiles: ["test"]

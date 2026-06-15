@@ -1,15 +1,11 @@
-"""Simulierter Temperatursensor (constrained node, vgl. Cortex-M).
-
-Raum und ID kommen aus Umgebungsvariablen (AREA, DEVICE_ID). Dieselbe Datei
-erzeugt damit beliebig viele Instanzen in beliebig vielen Raeumen, ohne dass
-sich der Code aendert -- das demonstriert Skalierbarkeit und Erweiterbarkeit.
-"""
 import os
 
 from common.contract import Device
-from common import profiles
+from common import sensing
+from common import simclock
+from common.contract import CONTROL_TOPIC, CLOCK_TOPIC
 
-
+# Simulierter Sensor: Temperatur
 def main() -> None:
     area = os.environ.get("AREA", "living_room")
     did = os.environ.get("DEVICE_ID", f"temp-{area}-01")
@@ -21,8 +17,11 @@ def main() -> None:
         capabilities=["temperature"],
     )
 
+    dev.control_hooks[CONTROL_TOPIC] = sensing.set_scenario  # Szenario per Bus
+    dev.control_hooks[CLOCK_TOPIC] = simclock.set_clock       # Uhr per Bus
+
     def work() -> None:
-        dev.publish_telemetry("temperature", profiles.temperature(), "celsius")
+        dev.publish_telemetry("temperature", sensing.temperature(area), "celsius")
 
     dev.run_forever(interval=5, work=work)
 

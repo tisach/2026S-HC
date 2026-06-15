@@ -1,0 +1,21 @@
+{
+  "name": "Werktag eines Berufstätigen (Single-Haushalt)",
+  "description": "Plausibler Tagesablauf: morgens kurz zu Hause, tagsüber abwesend, abends im Wohnzimmer, nachts im Schlafzimmer. Sensoren spielen dieses Profil zeitabhängig ab; pro Segment gilt der angegebene Wert bis zum nächsten 'from'-Zeitpunkt (Umlauf über Mitternacht).",
+  "areas": {
+    "living_room": [
+      {"from": "00:00", "presence": false, "temp": 20.0, "note": "Nacht, Wohnzimmer leer, Heizung abgesenkt"},
+      {"from": "06:50", "presence": true,  "temp": 20.4, "note": "Aufstehen, Frühstück im Wohn-/Essbereich"},
+      {"from": "08:05", "presence": false, "temp": 20.7, "note": "Haus verlassen (Arbeit), niemand anwesend"},
+      {"from": "12:30", "presence": false, "temp": 21.3, "note": "Mittag, Sonneneinstrahlung erwärmt den Raum leicht"},
+      {"from": "17:40", "presence": true,  "temp": 21.6, "note": "Heimkehr, Wohnzimmer wird genutzt"},
+      {"from": "19:00", "presence": true,  "temp": 22.1, "note": "Abendessen und Fernsehen"},
+      {"from": "23:05", "presence": false, "temp": 21.0, "note": "Schlafengehen, Wohnzimmer wieder leer"}
+    ],
+    "bedroom": [
+      {"from": "00:00", "presence": true,  "temp": 19.2, "note": "Schlafphase"},
+      {"from": "06:50", "presence": false, "temp": 19.7, "note": "Tagsüber leer"},
+      {"from": "14:00", "presence": false, "temp": 20.4, "note": "Nachmittags am wärmsten"},
+      {"from": "22:45", "presence": true,  "temp": 19.9, "note": "Zubettgehen, kurz gelüftet"}
+    ]
+  }
+}

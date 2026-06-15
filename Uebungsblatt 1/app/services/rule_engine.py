@@ -4,13 +4,17 @@ Abonniert Telemetrie, entdeckt Aktoren ueber die Registry-Announcements und
 steuert sie ausschliesslich ueber Kommando-Topics. Sender und Empfaenger kennen
 sich nicht direkt -- die Engine demonstriert lose Kopplung und Erweiterbarkeit:
 ein neuer Sensor oder eine neue Lampe funktioniert ohne Codeaenderung.
+
+Robustheit: jede eingehende Nachricht wird defensiv verarbeitet. Nicht-JSON,
+schema-ungueltige oder unerwartete Nachrichten werden verworfen, ohne den Dienst
+zu beeintraechtigen.
 """
 import json
 import logging
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import CallbackAPIVersion
-from jsonschema import validate
+from jsonschema import validate, ValidationError
 
 from common.contract import (PREFIX, command_topic, connect_with_retry,
                              load_schema, now_iso)
@@ -36,22 +40,30 @@ class RuleEngine:
         client.subscribe(f"{PREFIX}/_registry/announce/#", qos=1)
 
     def _on_message(self, client, userdata, msg):
+        # 1) dekodieren -- Nicht-JSON wird verworfen, nicht weitergereicht
         try:
             data = json.loads(msg.payload.decode())
-        except json.JSONDecodeError:
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.log.warning("verwerfe Nicht-JSON-Nachricht auf %s", msg.topic)
             return
-
-        if msg.topic.startswith(f"{PREFIX}/_registry/announce/"):
-            self._learn(data)
-            return
-
-        area = msg.topic.split("/")[1]
-        metric = data.get("metric")
-        value = data.get("value")
-        if metric == "distance":
-            self._handle_presence(area, value)
-        elif metric == "temperature" and value is not None and value > TEMP_WARN_C:
-            self.log.info("Temperatur hoch in %s: %.1f C", area, value)
+        # 2) verarbeiten -- jeder Fehler bleibt lokal und legt den Dienst nicht lahm
+        try:
+            if msg.topic.startswith(f"{PREFIX}/_registry/announce/"):
+                self._learn(data)
+                return
+            try:
+                validate(data, load_schema("telemetry"))
+            except ValidationError:
+                self.log.warning("verwerfe ungueltige Telemetrie auf %s", msg.topic)
+                return
+            area = msg.topic.split("/")[1]
+            metric, value = data.get("metric"), data.get("value")
+            if metric == "distance":
+                self._handle_presence(area, value)
+            elif metric == "temperature" and value > TEMP_WARN_C:
+                self.log.info("Temperatur hoch in %s: %.1f C", area, value)
+        except Exception as exc:  # defensiv: unerwartete Nachrichtenform
+            self.log.warning("uebergehe fehlerhafte Nachricht auf %s (%s)", msg.topic, exc)
 
     def _learn(self, reg: dict) -> None:
         if "on_off" in reg.get("capabilities", []):

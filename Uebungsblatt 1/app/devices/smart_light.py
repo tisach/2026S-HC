@@ -1,14 +1,9 @@
-"""Simulierter Aktor: schaltbare Lampe.
 
-Raum und ID konfigurierbar ueber AREA / DEVICE_ID. Abonniert sein
-Kommando-Topic und meldet seinen Zustand zurueck (retained). Reagiert nur auf
-Nachrichten -- weiss nichts ueber die Regel-Engine.
-"""
 import os
 
 from common.contract import Device
 
-
+# Simulierter Zeitgeber (simulierter Tagesablauf, Zeitraffer, feste Uhrzeit).
 class SmartLight(Device):
     def __init__(self, device_id: str, area: str) -> None:
         super().__init__(
