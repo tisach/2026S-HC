@@ -1,10 +1,3 @@
-// Erweiterung zu Aufgabe 1: Divergenz auf der CPU mit SIMD (AVX2)
-// These: Divergenz ist keine GPU-Eigenschaft, sondern eine SIMD-Eigenschaft.
-// Ein AVX-Vektor (8 Lanes) muss divergente Pfade genau wie ein Warp
-// serialisieren (alle Pfade rechnen, Ergebnis per Maske mischen), waehrend
-// der skalare Code dank Sprungvorhersage von k unberuehrt bleibt.
-// Kompilieren (Native Tools Prompt): cl /O2 /arch:AVX2 /EHsc aufgabe1_avx.cpp
-
 #include <cstdio>
 #include <cstdlib>
 #include <chrono>
@@ -28,17 +21,15 @@ void skalar(float *out, int n, int k) {
     }
 }
 
-// Maske: welche der 8 Vektor-Lanes gehoeren zu Pfad p? (Analogon zur
-// aktiven Maske eines Warps, nur 8 statt 32 Lanes breit)
+// Maske: welche der 8 Vektor-Lanes gehören zu Pfad p? (Analog zur aktiven Maske eines Warps, nur 8 statt 32 Lanes breit)
 __m256 maske(int k, int p) {
     alignas(32) int m[8];
     for (int l = 0; l < 8; ++l) m[l] = ((l % k) == p) ? -1 : 0;
     return _mm256_castsi256_ps(_mm256_load_si256((__m256i*)m));
 }
 
-// AVX-Version: der Vektor kann nicht verzweigen. Wie ein Warp muss er alle
-// k Pfade nacheinander komplett rechnen und per blendv nur die Lanes des
-// jeweiligen Pfads uebernehmen -> nutzbare Leistung faellt auf 1/k.
+// AVX-Version: der Vektor kann nicht verzweigen
+// Wie ein Warp muss er alle k Pfade nacheinander komplett rechnen und per blendv nur die Lanes des jeweiligen Pfads übernehmen
 void avx(float *out, int n, int k) {
     __m256 b = _mm256_set1_ps(1e-6f);
     for (int i = 0; i < n; i += 8) {
@@ -48,7 +39,7 @@ void avx(float *out, int n, int k) {
             __m256 t = x;
             for (int j = 0; j < ITERS; ++j)
                 t = _mm256_fmadd_ps(t, a, b);      // 8 FMAs pro Instruktion
-            x = _mm256_blendv_ps(x, t, maske(k, p)); // nur Pfad-Lanes uebernehmen
+            x = _mm256_blendv_ps(x, t, maske(k, p)); // nur Pfad-Lanes übernehmen
         }
         _mm256_store_ps(out + i, x);
     }

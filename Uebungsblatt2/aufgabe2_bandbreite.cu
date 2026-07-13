@@ -1,15 +1,10 @@
-// Aufgabe 2: Speicherzugriff — Latenz verstecken und Bandbreite
-// Kompilieren: nvcc -O3 -o aufgabe2 aufgabe2_bandbreite.cu
-// Ausgabe: CSV auf stdout (zum Plotten umleiten)
-
 #include <cstdio>
 #include <cstdlib>
 #include <algorithm>
 #include <random>
 
 // Speicherintensiver Streaming-Kernel mit minimaler Arithmetik: b[i] = a[i] * c
-// Das Zugriffsmuster wird über ein Index-Array idx gesteuert, der Kernel selbst
-// bleibt für alle drei Muster identisch — nur die Indizes unterscheiden sich.
+// Das Zugriffsmuster wird über ein Index-Array idx gesteuert, der Kernel selbst bleibt für alle drei Muster identisch
 __global__ void stream_kernel(const float *a, float *b, const int *idx, int n, float c) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) b[i] = a[idx[i]] * c;
@@ -20,8 +15,7 @@ __global__ void stream_kernel(const float *a, float *b, const int *idx, int n, f
 float messe(const float *a, float *b, const int *idx, int n, int block) {
     const int REPS = 5;
     int grid = (n + block - 1) / block;
-    // Mehrfacher Warmup: ein einzelner Launch reicht nicht, damit die GPU
-    // ihre Boost-Taktraten erreicht — sonst ist die erste Messung zu langsam
+    // Mehrfacher Warmup: ein einzelner Launch reicht nicht, damit die GPU ihre Boost-Taktraten erreicht
     for (int r = 0; r < 3; ++r)
         stream_kernel<<<grid, block>>>(a, b, idx, n, 2.0f);
     cudaDeviceSynchronize();

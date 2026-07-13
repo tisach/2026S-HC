@@ -1,6 +1,3 @@
-// Aufgabe 1: SIMT-Ausführungsmodell und Warp-Divergenz
-// Kompilieren: nvcc -O3 -o aufgabe1 aufgabe1_divergenz.cu
-// Ausgabe: CSV auf stdout (zum Plotten umleiten)
 
 #include <cstdio>
 #include <cstdlib>
@@ -8,10 +5,9 @@
 
 #define ITERS 10000  // arithmetische Iterationen (FMAs) pro Thread
 
-// Rechenintensiver Kernel: 1 Element pro Thread, rein arithmetische Last.
-// Divergenz: die Lanes eines Warps werden über lane % k auf k verschiedene
-// Pfade verteilt. Jeder Pfad leistet gleich viel Arbeit (ITERS FMAs), aber
-// der Warp muss die k Pfade nacheinander abarbeiten -> Laufzeit ~ k-fach.
+// Rechenintensiver Kernel: 1 Element pro Thread
+// Divergenz: die Lanes eines Warps werden über lane % k auf k verschiedene Pfade verteilt. 
+// Jeder Pfad leistet gleich viel Arbeit (ITERS FMAs), aber der Warp muss die k Pfade nacheinander abarbeiten -> Laufzeit ~ k-fach.
 // k=1 bedeutet keine Divergenz, k=32 heißt: jede Lane nimmt einen eigenen Pfad.
 __global__ void alu_kernel(float *out, int n, int k) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -70,7 +66,7 @@ int main() {
     cudaMalloc(&d_out, NMAX * sizeof(float));
     cudaMemset(d_out, 0, NMAX * sizeof(float));
 
-    // Teil 1: Skalierung über n (ohne Divergenz) -> ab wann läuft die GPU warm?
+    // Teil 1: Skalierung über n (ohne Divergenz)
     printf("# Skalierung ueber n (k=1)\nn,gflops\n");
     for (int n = 1024; n <= NMAX; n *= 4)
         printf("%d,%.1f\n", n, messe_gpu(d_out, n, 1));
