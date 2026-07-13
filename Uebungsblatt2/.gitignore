@@ -8,6 +8,7 @@ __pycache__/
 *.o
 *.lib
 *.dll
+*.tmp
 
 .vs/
 .vscode/
