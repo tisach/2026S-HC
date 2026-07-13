@@ -1,0 +1,20 @@
+# GPU: NVIDIA GeForce RTX 3070, theoretische Bandbreite: 448 GB/s
+
+# Zugriffsmuster (Blockgroesse 256)
+muster,gbs,prozent_vom_peak
+coalesced,406.0,91%
+stride_2,306.7,68%
+stride_4,181.0,40%
+stride_8,99.6,22%
+stride_16,104.9,23%
+stride_32,102.1,23%
+gather,57.3,13%
+
+# Occupancy (coalesced)
+blockgroesse,occupancy,gbs
+32,0.33,263.3
+64,0.67,400.8
+128,1.00,403.1
+256,1.00,397.8
+512,1.00,366.0
+1024,0.67,394.0
